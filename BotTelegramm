@@ -1,0 +1,596 @@
+import random
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton,ReplyKeyboardMarkup, KeyboardButton
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
+from captcha.image import ImageCaptcha
+from telebot import TeleBot, types
+
+TOKEN = '6322117619:AAG_eSXSpD2sOLsGAOmJAk3pmRcSUghunRw'
+bot = TeleBot(TOKEN)
+
+# Dictionnaire pour stocker les codes captcha associés aux utilisateurs
+captcha_dict = {}
+
+def main():
+    # Bot en attente des mises à jour en continu
+    bot.polling(none_stop=True)
+
+# Fonction pour générer un code captcha aléatoire
+def generate_captcha_code():
+    return str(random.randint(1000, 9999))
+
+# Fonction pour envoyer le code captcha à l'utilisateur
+def send_captcha(chat_id):
+    captcha_code = generate_captcha_code()
+    
+    captcha_dict[chat_id] = captcha_code
+
+    captcha_image = generate_captcha_image(captcha_code)
+
+    bot.send_photo(chat_id, captcha_image)
+    captcha_image.close()
+
+# Fonction pour générer une image captcha
+def generate_captcha_image(captcha_code):
+    captcha = ImageCaptcha()
+    captcha_image = captcha.generate_image(captcha_code)
+
+    captcha_bytes = BytesIO()
+    captcha_image.save(captcha_bytes, format='PNG')
+    captcha_bytes.seek(0)
+
+    return captcha_bytes
+
+# Fonction pour vérifier le code captcha saisi par l'utilisateur
+def check_captcha(message):
+    user = message.from_user
+    try:
+        captcha_code = captcha_dict.get(message.chat.id)
+
+        if captcha_code:
+            user_input = message.text.strip()
+
+            if user_input == captcha_code:
+                bot.send_message(message.chat.id, f"Congratulations {user.first_name}! The captcha code is correct.")
+                send_welcome_message(message.chat.id)
+            else:
+                bot.send_message(message.chat.id, "The captcha code is incorrect. Try Again.")
+                send_captcha(message.chat.id)
+        else:
+            send_captcha(message.chat.id)
+
+    except Exception as e:
+        print(f"An error has occurred : {e}")
+
+# Fonction pour envoyer un message de bienvenue
+def send_welcome_message(chat_id):
+    bot.send_message(chat_id, "🚀 Welcome to CryptoEduBot - Your Gateway to the World of Cryptocurrencies! 🌐 At CryptoEduBot, we are dedicated to demystifying the world of cryptocurrencies and blockchain, ensuring accessibility for everyone. Our mission is to deliver high-quality educational content while presenting exciting partnership and investment prospects. 📚💡")
+
+    markup = InlineKeyboardMarkup()
+    btn_continue = InlineKeyboardButton("💼 Join Our Team! 💼", callback_data='continue')
+    markup.add(btn_continue)
+
+    bot.send_message(chat_id, "Click on the next button", reply_markup=markup)
+
+# Fonction pour réagir au démarrage du bot
+@bot.message_handler(commands=['start'])
+def handle_start(message):
+    send_captcha(message.chat.id)
+
+# Fonction pour réagir aux messages texte de l'utilisateur
+@bot.message_handler(func=lambda message: True, content_types=['text'])
+def handle_text(message):
+    check_captcha(message)
+
+# Fonction pour gérer les callbacks
+@bot.callback_query_handler(func=lambda call: True)
+def handle_query(call):
+    if call.data == 'continue':
+        bot.send_message(call.message.chat.id, "Ready to be part of an exceptional team? Here's what awaits you:")
+
+        markup = InlineKeyboardMarkup()
+        btn_conditions = InlineKeyboardButton("💼 Partnership Opportunities:", callback_data='conditions')
+        markup.add(btn_conditions)
+
+        bot.send_message(call.message.chat.id, """
+🤓 Swift and thorough training for secure operations.
+🤝 A team of trustworthy, experienced, and friendly professionals.
+🥰 Fair management with no fines.
+🌿 VHQ benefits for you and your friends at cost price.
+💵 The most honest and highest payment in the industry, with no delays or hurdles.
+🎁 Bonus + 25% of the salary in the first month for a dynamic start.
+🚀 Elevate your quality of life for you and your loved ones. Check out the Work Conditions.
+                         """, reply_markup=markup)
+
+    elif call.data == 'conditions':
+        bot.send_message(call.message.chat.id, """
+                         Looking for a fruitful collaboration? Type /partnership to discover the benefits of working with CryptoEduBot. We emphasize:
+
+🤝 Total Transparency: We believe in transparency at every level of our collaboration. Our processes and results are open for scrutiny.
+
+🌐 Personalized Support: Each partner is unique, which is why we offer personalized support to meet your specific needs.
+
+💎 Exclusive Benefits: Enjoy exclusive benefits as a CryptoEduBot partner, including special resources and reserved promotions.
+                         """)
+
+        markup = InlineKeyboardMarkup()
+        btn_continue = InlineKeyboardButton("Continue", callback_data='continue_second')
+        markup.add(btn_continue)
+
+        bot.send_message(call.message.chat.id, "Click on Continue", reply_markup=markup)
+
+    elif call.data == 'continue_second':
+        # bot.send_message(call.message.chat.id, "Choose the city")
+          
+        markup = InlineKeyboardMarkup()
+        btn_Australia = InlineKeyboardButton("Australia (AU):", callback_data='AU')
+        btn_Kingdom = InlineKeyboardButton("United Kingdom (UK):", callback_data='UK')
+        btn_Canada = InlineKeyboardButton("Canada (CA):", callback_data='CA')
+        # btn_tanger = InlineKeyboardButton("Ekaterinbourg", callback_data='Ekaterinbourg')
+        # btn_tanger = InlineKeyboardButton("Kazan", callback_data='Kazan')
+        # btn_agadir = InlineKeyboardButton("Moscou", callback_data='Moscou')
+        # btn_casa = InlineKeyboardButton("Saint-Pétersbourg", callback_data='Saint-Pétersbourg')
+        # btn_rabat = InlineKeyboardButton("Novossibirsk", callback_data='Novossibirsk')
+        # btn_tanger = InlineKeyboardButton("Ekaterinbourg", callback_data='Ekaterinbourg')
+        # btn_tanger = InlineKeyboardButton("Kazan", callback_data='Kazan')
+        markup.add(btn_Australia, btn_Kingdom, btn_Canada)
+
+        bot.send_message(call.message.chat.id, "Choose Your Country", reply_markup=markup)
+
+    elif call.data == 'AU':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_north = InlineKeyboardButton("New South Wales (NSW):", callback_data='NSW')
+        btn_South = InlineKeyboardButton("Victoria (VIC):", callback_data='VIC')
+        btn_East = InlineKeyboardButton("Queensland (QLD):", callback_data='QLD')
+        btn_West = InlineKeyboardButton("South Australia (SA):", callback_data='SA')
+        btn_West = InlineKeyboardButton("Western Australia (WA):", callback_data='WA')
+        markup.add(btn_north, btn_South, btn_East,btn_West)
+
+        bot.send_message(call.message.chat.id, "Choose the Countries ", reply_markup=markup)
+
+    elif call.data == 'CA':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+        # markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        # markup.add(KeyboardButton('Cliquez-moi !'))
+        # bot.send_message(message.chat.id, "Salut ! Cliquez sur le bouton :", reply_markup=markup)
+        
+        
+        markup = InlineKeyboardMarkup()
+        btn_north = InlineKeyboardButton("Ontario (ON):", callback_data='ON')
+        btn_South = InlineKeyboardButton("Quebec (QC):", callback_data='QC')
+        btn_East = InlineKeyboardButton("New Brunswick (NB):", callback_data='NB')
+        btn_West = InlineKeyboardButton("Prince Edward Island (PE):", callback_data='PE')
+        btn_West1 = InlineKeyboardButton("Nova Scotia (NS):", callback_data='NS')
+        btn_West2 = InlineKeyboardButton("Newfoundland and Labrador (NL):", callback_data='NL')
+        btn_West3 = InlineKeyboardButton("Atlantic Time Zone (AST):", callback_data='AST')
+        btn_West4 = InlineKeyboardButton("Nova Scotia (NS):", callback_data='NS')
+        markup.add(btn_north, btn_South, btn_East,btn_West,btn_West1,btn_West2,btn_West3,btn_West4)
+
+        bot.send_message(call.message.chat.id, "Choose the zone", reply_markup=markup)
+    # elif message.text == 'Cliquez-moi !':
+    #     user = message.from_user
+    #     bot.send_message(message.chat.id, f'Bouton cliqué par {user.first_name} !')
+    # Ajoutez cette partie après le bloc elif call.data == 'agadir':
+    elif call.data == 'UK':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_north = InlineKeyboardButton("England:", callback_data='England')
+        btn_South = InlineKeyboardButton("Scotland:", callback_data='Scotland')
+        btn_East = InlineKeyboardButton("Wales:", callback_data='Wales')
+        btn_West = InlineKeyboardButton("Northern Ireland:", callback_data='Northern_Ireland')
+        markup.add(btn_north, btn_South, btn_East,btn_West)
+
+        bot.send_message(call.message.chat.id, "Choose the Countries ", reply_markup=markup)
+   
+    elif call.data == 'NSW':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Sydney", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Newcastle", callback_data='city')
+        btn_test = InlineKeyboardButton("Wollongong", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Central Coas", callback_data='city')
+    
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'VIC':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Melbourne ", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Geelong", callback_data='city')
+        btn_test = InlineKeyboardButton("Ballarat", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Bendigo", callback_data='city')
+    
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'QLD':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Brisbane  ", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Gold Coast", callback_data='city')
+        btn_test = InlineKeyboardButton("Cairns", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Townsville", callback_data='city')
+    
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'SA':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Adelaide   ", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Mount Gambier", callback_data='city')
+        btn_test = InlineKeyboardButton("Port Augusta", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Whyalla", callback_data='city')
+    
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'WA':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Perth    ", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Fremantle", callback_data='city')
+        btn_test = InlineKeyboardButton("Bunbury", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Mandurah", callback_data='city')
+    
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'England':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("London", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Manchester", callback_data='city')
+        btn_test = InlineKeyboardButton("Birmingham", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Liverpool", callback_data='city')
+        btn_Bristol = InlineKeyboardButton("Bristol", callback_data='city')
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt,btn_Bristol)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'Scotland':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Edinburgh", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Glasgow", callback_data='city')
+        btn_test = InlineKeyboardButton("Aberdeen", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Inverness", callback_data='city')
+        btn_tttt = InlineKeyboardButton("Dundee", callback_data='city')
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt,btn_tttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'Northern_Ireland':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Belfast", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Derry/Londonderry", callback_data='city')
+        btn_test = InlineKeyboardButton("Armagh", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Newry", callback_data='city')
+        btn_tttt = InlineKeyboardButton("Lisburn", callback_data='city')
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt,btn_tttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)    
+    elif call.data == 'Wales':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Cardiff", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Swansea", callback_data='city')
+        btn_test = InlineKeyboardButton("Newport", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Wrexham", callback_data='city')
+        btn_tttt = InlineKeyboardButton("Bangor", callback_data='city')
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt,btn_tttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'ON':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Toronto ", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Ottawa", callback_data='city')
+        btn_test = InlineKeyboardButton("Mississauga", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Hamilton", callback_data='city')
+        
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup) 
+    elif call.data == 'QC':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Montreal  ", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Quebec City", callback_data='city')
+        btn_test = InlineKeyboardButton("Laval", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Gatineau", callback_data='city')
+        
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'NB':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Saint John  ", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Moncton", callback_data='city')
+        btn_test = InlineKeyboardButton("Fredericton ", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Miramichi", callback_data='city')
+        
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'PE':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Charlottetown  ", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Summerside", callback_data='city')
+        btn_test = InlineKeyboardButton("Stratford ", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Cornwall", callback_data='city')
+        
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'NS':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Halifax   ", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Dartmouth", callback_data='city')
+        btn_test = InlineKeyboardButton("Sydney ", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Truro", callback_data='city')
+        
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'NL':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("St. John's   ", callback_data='city')
+        btn_chimist = InlineKeyboardButton("Mount Pearl", callback_data='city')
+        btn_test = InlineKeyboardButton("Corner Brook ", callback_data='city')
+        btn_ttt = InlineKeyboardButton("Grand Falls-Windsor", callback_data='city')
+        
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your City:", reply_markup=markup)
+    elif call.data == 'city':
+        bot.send_message(call.message.chat.id, "The selection is saved. THANKS!")
+
+        markup = InlineKeyboardMarkup()
+        btn_developpement = InlineKeyboardButton("Work [Operator]", callback_data='developpement')
+        btn_chimist = InlineKeyboardButton("Work [Warehouse]", callback_data='chimist')
+        btn_test = InlineKeyboardButton("Work [Chemist]", callback_data='tes')
+        btn_ttt = InlineKeyboardButton("Work [Crystal]", callback_data='ttt')
+        markup.add(btn_developpement,btn_chimist,btn_test,btn_ttt)
+
+        bot.send_message(call.message.chat.id, "Choose Your Work:", reply_markup=markup)   
+    elif call.data == 'developpement':
+        bot.send_message(call.message.chat.id, """
+                        We are looking for an experienced professional to become part of our family.
+
+Requirements:
+✓ Experience from 1 year in a department store (from 100 thousand transactions);
+✓ Ideal reputation, recommendations from a former employer;
+✓ Excellent communication skills, competent written speech and the ability to clearly formulate your thoughts;
+✓ Personal qualities: responsibility, diligence, pedantry, decency, initiative;
+✓ Complete understanding of store operating processes and ability to multi-task;
+✓ Clear mind (do not use surfactants/alcohol in the workplace);
+✓ High computer skills;
+✓ Availability of a deposit of 70,000 rubles.
+
+Labor conditions:
+✓ Working day from 10:00 to 20:00 Moscow time, full-time (cannot be combined with other work or study);
+✓ 6/1 schedule (6 working days per week and 1 day off);
+✓ Stable and long-term cooperation within a friendly team of professionals with many years of experience;
+✓ Salary based on interview results (we have no late payments).
+                         """)
+
+        markup = InlineKeyboardMarkup()
+        btn_methode_paiement = InlineKeyboardButton("Choose a payment method:", callback_data='methode_paiement')
+        markup.add(btn_methode_paiement)
+
+        # bot.send_message(call.message.chat.id, "Choose a payment method", reply_markup=markup)
+    elif call.data == 'chimist':
+        bot.send_message(call.message.chat.id, """
+            Warehouses are needed in Moscow, the Moscow region and all cities of the Russian Federation with a population of more than 500 thousand people.
+
+Requirements:
+✓ Have your own car;
+✓ Availability of reliable premises for storage and packaging of goods;
+✓ Clear mind (do not use surfactants/alcohol in the workplace);
+✓ Availability of a deposit of 150,000 rubles. (the deposit can be earned as a trader).
+
+Labor conditions:
+✓ Payment for packaged MK = 220 rubles. for each pack included in its composition (for example, one MK packaged for 70 packs = 15,400 rubles, 30-60 MKs of this type should be produced per month);
+✓ Any amount of work of your choice (from moderate to full-time);
+✓ Payment for unpackaged MK: 25 g - 2000 rub. | 50 g - 3000 rub. | 100 g - 5000 rubles. etc.             
+                         """)
+
+        markup = InlineKeyboardMarkup()
+        btn_methode_paiement = InlineKeyboardButton("Choose a payment method", callback_data='methode_paiement')
+        markup.add(btn_methode_paiement)
+
+        bot.send_message(call.message.chat.id, "Choose a payment method", reply_markup=markup)
+    elif call.data == 'tes':
+        bot.send_message(call.message.chat.id, """
+                         We welcome chemists with and without experience to cooperate. The priority is the Moscow region or the Central Federal District, but we will consider all districts.
+
+Requirements:
+✓ Availability of premises for the production of goods (a country house with electricity, water and sanitation);
+✓ Deposit 75,000 rubles, provided that you have all the necessary materials for synthesis. If you do not have the equipment, you can order it from us (total cost ~ 200,000 rubles)
+
+Labor conditions:
+✓ The highest payment for each gram of prepared product among competitors;
+✓ We only use raw materials legal in the Russian Federation;
+✓ We ship reagents and equipment in bulk to a location convenient for you;
+✓ Training, online consultations, synthesis support from a professional chemist.
+                         """)
+
+        markup = InlineKeyboardMarkup()
+        btn_methode_paiement = InlineKeyboardButton("Choose a payment method", callback_data='methode_paiement')
+        markup.add(btn_methode_paiement)
+
+        bot.send_message(call.message.chat.id, "Choose a payment method", reply_markup=markup)
+    elif call.data == 'ttt':
+        bot.send_message(call.message.chat.id, """
+                  Large crystals of the highest quality. Synthesized by experienced chemists using professional equipment.
+
+A powerful stimulant with a euphoric effect will help activate God Mode and give you the strength to move mountains!
+
+It does not have pronounced side effects, thanks to its impeccable quality and highest degree of purification.
+
+We are actively recruiting couriers in all cities of the Russian Federation, paying from 1000 rubles. for 1 gram and offer all new employees a bonus + 25% of their salary the first month of work!
+
+Working conditions https://telegra.ph/test       
+                         """)
+
+        markup = InlineKeyboardMarkup()
+        btn_methode_paiement = InlineKeyboardButton("Choose a payment method", callback_data='methode_paiement')
+        markup.add(btn_methode_paiement)
+
+        bot.send_message(call.message.chat.id, "Choose a payment method", reply_markup=markup)
+
+    elif call.data == 'methode_paiement':
+        # bot.send_message(call.message.chat.id, "Choose a payment method")
+
+        markup = InlineKeyboardMarkup()
+        btn_btc = InlineKeyboardButton("Bitcoin [BTC]", callback_data='btc')
+        btn_etr = InlineKeyboardButton("Litecoin [LTC]", callback_data='etr')
+        btn_trn = InlineKeyboardButton("TRON [TRN]", callback_data='trn')
+        markup.add(btn_btc, btn_etr, btn_trn)
+
+        bot.send_message(call.message.chat.id, "Method of payment", reply_markup=markup)
+
+    elif call.data == 'btc':
+        bot.send_message(call.message.chat.id, """
+                         Balance Replenishment Request Number: BBJD-4235157
+You top up your balance by: 10 rubles.
+
+To top up your balance by 10 rubles, send a minimum of 0.00000306 BTC to the wallet listed below.
+
+Due to exchange rate depreciation, you could be credited several rubles less. In order for the balance to be replenished with the required amount, we recommend sending a little more than specified.
+
+Pay your request within 180 minutes. . If you pay later than expected, your payment will not be credited automatically!
+
+Attention! The balance will be replenished after the 1st confirmation from the Bitcoin (BTC) network!
+
+Attention! Contact payment support only if your transfer has received 1 network confirmation.
+
+Attention! This wallet is single use and is only valid for this application! Do not send to this wallet more than once.
+
+Track the transfer: Blockchair.com
+
+After transferring funds, wait for 1 confirmation from the network and the system will credit your payment! If you have made payment, DO NOT CANCEL YOUR ORDER unless absolutely necessary. To cancel an order, write /cancel
+
+If you encounter a payment problem, contact support (contacts: /support), you will see contacts there. Or follow the link: open an application on the website. Payment issues are resolved within 48 hours.
+      https://blockchair.com/bitcoin/address/bc1qaruh5r6m6raapevxheyh4099tn523c9jnt                   """)
+        bot.send_message(call.message.chat.id,"""Transfer the specified amount of LTC to this wallet:""") 
+        bot.send_message(call.message.chat.id,"""ltc1qdxkfk22cm3cwhceu6a62sduw76slnp36""")  
+        markup = InlineKeyboardMarkup()
+        btn_continu = InlineKeyboardButton("Support", callback_data='continu')
+        markup.add(btn_continu)
+
+        bot.send_message(call.message.chat.id, "If you change your mind and do not wish to pay, click the button below.", reply_markup=markup)    
+    elif call.data == 'continu':
+        # bot.send_message(call.message.chat.id, "Choose the city")
+          
+     
+
+          bot.send_message(call.message.chat.id,"""
+                           For payment problems: @SUUPP_TYTBOT
+For employment questions: @sd247job
+For further questions: @sd247reply
+                           """)     
+    elif call.data == 'etr':
+        bot.send_message(call.message.chat.id, """
+                          Balance Replenishment Request Number: BJSE-1015048
+You top up your balance by: 10 rubles.
+
+To top up your balance by 10 rubles, send at least 0.00166540 LTC to the wallet listed below.
+
+Due to exchange rate depreciation, you could be credited several rubles less. In order for the balance to be replenished with the required amount, we recommend sending a little more than specified.
+
+Pay your request within 120 minutes. . If you pay later than expected, your payment will not be credited automatically!
+
+Attention! The balance will be replenished after the 1st confirmation of the Litecoin (LTC) network!
+
+Attention! Contact payment support only if your transfer has received 1 network confirmation.
+
+Attention! This wallet is single use and is only valid for this application! Do not send to this wallet more than once.
+
+Track the transfer: Blockchair.com
+
+After transferring funds, wait for 1 confirmation from the network and the system will credit your payment! If you have made payment, DO NOT CANCEL YOUR ORDER unless absolutely necessary. To cancel an order, write /cancel
+                     https://blockchair.com/litecoin/address/ltc1qdxkfk22cm3cwhceu6a62sduw76sl              
+                         """)
+        bot.send_message(call.message.chat.id,"""Transfer the specified amount of LTC to this wallet:""") 
+        bot.send_message(call.message.chat.id,"""ltc1qdxkfk22cm3cwhceu6a62sduw76slnp36""") 
+        markup = InlineKeyboardMarkup()
+        btn_continu = InlineKeyboardButton("Support", callback_data='continu')
+        markup.add(btn_continu)
+
+        bot.send_message(call.message.chat.id, "If you change your mind and do not wish to pay, click the button below.", reply_markup=markup)    
+    elif call.data == 'continu':
+        # bot.send_message(call.message.chat.id, "Choose the city")
+          
+     
+
+          bot.send_message(call.message.chat.id,"""
+                           For payment problems: @SUUPP_TYTBOT
+For employment questions: @sd247job
+For further questions: @sd247reply
+                           """)  
+    elif call.data == 'trn':
+        bot.send_message(call.message.chat.id, """
+                         Balance Replenishment Request Number: BJSE-1015048
+You top up your balance by: 10 rubles.
+
+To top up your balance by 10 rubles, send at least 0.00166540 LTC to the wallet listed below.
+
+Due to exchange rate depreciation, you could be credited several rubles less. In order for the balance to be replenished with the required amount, we recommend sending a little more than specified.
+
+Pay your request within 120 minutes. . If you pay later than expected, your payment will not be credited automatically!
+
+Attention! The balance will be replenished after the 1st confirmation of the Litecoin (LTC) network!
+
+Attention! Contact payment support only if your transfer has received 1 network confirmation.
+
+Attention! This wallet is single use and is only valid for this application! Do not send to this wallet more than once.
+
+Track the transfer: Blockchair.com
+
+After transferring funds, wait for 1 confirmation from the network and the system will credit your payment! If you have made payment, DO NOT CANCEL YOUR ORDER unless absolutely necessary. To cancel an order, write /cancel
+                     https://blockchair.com/litecoin/address/ltc1qdxkfk22cm3cwhceu6a62sduw76sl """)
+        bot.send_message(call.message.chat.id,"""Transfer the specified amount of LTC to this wallet:""") 
+        bot.send_message(call.message.chat.id,"""ltc1qdxkfk22cm3cwhceu6a62sduw76slnp36""") 
+        markup = InlineKeyboardMarkup()
+        btn_continu = InlineKeyboardButton("Support", callback_data='continu')
+        markup.add(btn_continu)
+
+        bot.send_message(call.message.chat.id, "If you change your mind and do not wish to pay, click the button below.", reply_markup=markup)    
+    elif call.data == 'continu':
+        # bot.send_message(call.message.chat.id, "Choose the city")
+          
+     
+
+          bot.send_message(call.message.chat.id,"""
+                           For payment problems: @SUUPP_TYT
+For employment questions: @sd247
+For further questions: @sd247re
+                           """)  
+  
+# Appel de la fonction principale
+if __name__ == "__main__":
+    main()
